@@ -1,0 +1,3 @@
+{
+  "extends": "@xhksun/eslint-config-ts"
+}
