@@ -12,6 +12,7 @@ describe('effect', () => {
     expect(res).toBe(3)
   })
 
+  // targetMap -> depsMap -> deps 的理由
   it('should observe properties not reactive object', () => {
     const nums = reactive({ num1: 0, num2: 1 })
     const dummy: any = {}
@@ -27,6 +28,27 @@ describe('effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(2)
   })
 
+  // 思考一个问题: cleanup 是不是会性能消耗?
+  // 具体可以看这个 PR #4017 https://github.com/vuejs/core/pull/4017
+  it('should not react when reactive is not effect', () => {
+    const obj = reactive({ ok: true, msg: 'cleanup' })
+    let dummy
+    const fnSpy = vi.fn(() => dummy = obj.ok ? obj.msg : 'not cleanup')
+    effect(fnSpy)
+    // effect.deps.length: 0 -> cleanup -> 0 -> track -> 2
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(dummy).toBe('cleanup')
+    obj.ok = false
+    // effect.deps.length: 2 -> cleanup -> 0 -> track -> 1
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    obj.msg = ''
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    expect(dummy).toBe('not cleanup')
+    obj.ok = true
+    // effect.deps.length: 1 -> cleanup -> 0 -> track -> 2
+    obj.ok = false
+    // effect.deps.length: 2 -> cleanup -> 0 -> track -> 1
+  })
   it('should run the passed function once (wrapped by a effect)', () => {
     const fnSpy = vi.fn(() => {})
     effect(fnSpy)
