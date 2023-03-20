@@ -6,7 +6,7 @@ const effectStack: ReactiveEffect[] = []
 let activeEffect: ReactiveEffect
 
 class ReactiveEffect {
-  // deps: (Set<ReactiveEffect>)[] = []
+  deps: (Set<ReactiveEffect>)[] = []
   private _fn
 
   constructor(fn: () => any) {
@@ -14,8 +14,7 @@ class ReactiveEffect {
   }
 
   run() {
-    // cleanup effects
-    // cleanup(this)
+    cleanupEffect(this)
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     activeEffect = this
     effectStack.push(activeEffect)
@@ -42,6 +41,7 @@ export function track(target: object, key: string | symbol) {
   }
   if (activeEffect) {
     deps.add(activeEffect)
+    activeEffect.deps.push(deps)
   }
 }
 
@@ -52,4 +52,16 @@ export function trigger(target: object, key: string | symbol) {
   for (const effect of [...deps]) {
     effect.run()
   }
+}
+
+function cleanupEffect(effect: ReactiveEffect) {
+  for (const deps of effect.deps) {
+    deps.delete(effect)
+  }
+  // 这里不是很好测试, 可以查看对应的测试用例
+  // should not react when reactive is not effect
+  // 我把 deps 的 length 变化写出来了
+  // 如果迷惑只需要记住一点 track 中 deps 会 push
+  // 不能让 deps 无限增长
+  effect.deps.length = 0
 }
